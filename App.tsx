@@ -65,7 +65,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaView style={backgroundStyle}>
       <Text>
-        Hello WOrld
+        Hello WOrld from vedant
       </Text>
     </SafeAreaView>
   );
