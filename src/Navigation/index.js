@@ -5,6 +5,11 @@ import {useSelector, useDispatch} from 'react-redux';
 import Home from '../Screens/Home';
 import Register from '../Screens/Register';
 import Login from '../Screens/Login';
+import RegisterProfile from '../Screens/RegisterProfile';
+import QuizDescription from '../Screens/QuizDescription';
+import Quiz from '../Screens/Quiz';
+import AddQuiz from '../Screens/AddQuiz';
+import AddQuestion from '../Screens/AddQuestion';
 
 const Stack = createStackNavigator();
 
@@ -20,7 +25,7 @@ const LoginStack = () => {
 const HomeStack = () => {
   return (
     <Stack.Navigator screenOptions={{headerShown: false}}>
-      <Stack.Screen name="Home" component={Home}></Stack.Screen>
+      <Stack.Screen name="Home" component={AddQuestion}></Stack.Screen>
     </Stack.Navigator>
   );
 };
