@@ -36,14 +36,14 @@ const App = () => {
   };
 
   return (
-    <Provider store={store}>
-      <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef}>
+      <Provider store={store}>
         <PersistGate persistor={persistor}>
           <Nav />
           <Toast config={toastConfig} />
         </PersistGate>
-      </NavigationContainer>
-    </Provider>
+      </Provider>
+    </NavigationContainer>
   );
 };
 

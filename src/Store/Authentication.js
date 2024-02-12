@@ -2,13 +2,14 @@ import {createSlice} from '@reduxjs/toolkit';
 import axios from 'axios';
 import {Alert, Platform, ToastAndroid} from 'react-native';
 
-import {API_HOST} from './../utils/https';
-import navigationService from '../Utils/navigationService';
+import {API_HOST} from './../Utils/http';
+import * as navigationService from '../Utils/navigationService';
 import {ToastMessage} from '../components/Toast';
 
 const initialState = {
-  isLoggedIn: true,
+  isLoggedIn: false,
   token: null,
+  isProfileComplete: false,
 };
 
 const login = createSlice({
@@ -19,15 +20,20 @@ const login = createSlice({
       //console.log('In login reducer', action.payload);
       state.token = action.payload.token;
       state.isLoggedIn = true;
+      state.isProfileComplete = action.payload.isProfileCompleted;
     },
     createAccount: (state, action) => {
       //console.log('In create reducer', action.payload);
       state.token = action.payload.token;
       state.isLoggedIn = true;
+      state.isProfileComplete = action.payload.isProfileCompleted;
     },
     logout: (state, action) => {
       state.isLoggedIn = false;
       state.token = null;
+    },
+    changeProfileStatus: (state, action) => {
+      state.isProfileComplete = action.payload;
     },
   },
 });
@@ -37,15 +43,20 @@ export const loginAction = (data, setLoader) => async dispatch => {
   try {
     const res = await axios({
       method: 'POST',
-      url: API_HOST + `/api/login/`,
+      url: API_HOST + `/auth/login/`,
       data: data,
     });
-    //console.log('In login action', res.data);
+    console.log('In login action', res.data);
     ToastMessage.showSuccessMessage('Login Successful');
     setLoader(false);
     dispatch(Login(res.data));
   } catch (error) {
-    ToastMessage.showErrorMessage(error.response.data.message);
+    console.log('In login action', error.response?.data?.error);
+    ToastMessage.showErrorMessage(
+      error.response?.data?.error
+        ? error.response?.data?.error
+        : 'Something went wrong',
+    );
     setLoader(false);
   }
 };
@@ -108,40 +119,50 @@ export const changePasswordAction =
       setLoader(false);
     }
   };
-export const forgotPasswordAction = data => async dispatch => {
-  // console.log('in login request');
-  try {
-    const res = await axios({
-      method: 'POST',
-      url: API_HOST + `/api/forgot-password-send-otp/`,
-      data: data,
-      headers: configHeader,
-    });
-    //console.log('In login action', res.data);
-    ToastMessage.showSuccessMessage('OTP sent to your number');
-    navigationService.navigate('ForgotPasswordOTP', {
-      mobile: data.mobile_no,
-    });
-  } catch (error) {
-    ToastMessage.showErrorMessage(error.response.data.message);
-  }
-};
+export const forgotPasswordAction =
+  (data, setLoader, onSuccess) => async dispatch => {
+    // console.log('in login request');
+    try {
+      setLoader(true);
+      const res = await axios({
+        method: 'POST',
+        url: API_HOST + `/auth/ForgotPassword/`,
+        data: data,
+      });
+      console.log('In login action', res.data);
+      ToastMessage.showSuccessMessage('OTP sent to your Email.');
+      setLoader(false);
+      onSuccess(res.data.otp);
+      // navigationService.navigate('ForgotPasswordOTP', {
+      //   mobile: data.mobile_no,
+      // });
+    } catch (error) {
+      setLoader(false);
+      console.log('In login action', error.response.data.error);
+      ToastMessage.showErrorMessage(
+        error.response.data.error || 'Something went wrong',
+      );
+    }
+  };
 
-export const registerAction = data => async dispatch => {
+export const registerAction = (data, setLoader) => async dispatch => {
   // console.log('in login request');
   try {
+    setLoader(true);
     const res = await axios({
       method: 'POST',
-      url: API_HOST + `/api/register/`,
+      url: API_HOST + `/auth/register/`,
       data: data,
-      headers: configHeader,
     });
     console.log('In register action', res.data);
     ToastMessage.showSuccessMessage('register Successful');
-    dispatch(createAccount(res.data));
-    //navigationService.navigate('Login');
+    setLoader(false);
+    dispatch(createAccount({...res.data, isProfileCompleted: false}));
+    // navigationService.navigate('CompleteProfileScreen');
   } catch (error) {
-    ToastMessage.showErrorMessage(error.response.data.message);
+    console.log('In register action', error.response.data.error);
+    setLoader(false);
+    ToastMessage.showErrorMessage(error.response.data.error);
   }
 };
 
@@ -164,18 +185,20 @@ export const sendMobileNumberAction = (data, setLoader) => async dispatch => {
   }
 };
 
-export const verifyOTPAction = data => async dispatch => {
-  console.log('in verifyOTPAction ', data);
+export const verifyOTPAction = (data, setLoader) => async dispatch => {
   try {
+    setLoader(true);
     const res = await axios({
       method: 'POST',
       url: API_HOST + `/api/verify-otp/`,
       data: data,
-      headers: configHeader,
     });
-    // console.log('OTP verify action', res.data);
-    navigationService.navigate('Signup', {mobile: data.mobile_no});
+    console.log('OTP verify action', res.data);
+    ToastMessage.showSuccessMessage('OTP Verified');
+    setLoader(false);
+    // navigationService.navigate('Signup', {mobile: data.mobile_no});
   } catch (error) {
+    setLoader(false);
     ToastMessage.showErrorMessage(error.response.data.message);
   }
 };
@@ -198,5 +221,32 @@ export const verifyForgotPassOTPAction = data => async dispatch => {
   }
 };
 
-export const {Login, createAccount, logout} = login.actions;
+export const CompleteProfileAction =
+  (data, token, setLoader) => async dispatch => {
+    const localHeader = {Authorization: `Token ${token}`};
+    try {
+      const res = await axios({
+        method: 'POST',
+        url: API_HOST + `/profile/`,
+        data: data,
+        headers: localHeader,
+      });
+      console.log('In complete profile action', res.data);
+      ToastMessage.showSuccessMessage('Profile Completed');
+      setLoader(false);
+      dispatch(changeProfileStatus(true));
+      navigationService.navigate('Home');
+    } catch (error) {
+      console.log('In complete profile action', error);
+      ToastMessage.showErrorMessage(
+        error.response?.data?.error
+          ? error.response?.data?.error
+          : 'Something went wrong',
+      );
+      setLoader(false);
+    }
+  };
+
+export const {Login, createAccount, logout, changeProfileStatus} =
+  login.actions;
 export default login.reducer;
